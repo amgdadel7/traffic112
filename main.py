@@ -308,8 +308,6 @@ def _load_model_attempt():
             # Optimize for Cloud Run (CPU-only, memory efficient)
             config.inter_op_parallelism_threads = 1
             config.intra_op_parallelism_threads = 1
-            # Disable GPU options for Cloud Run
-            config.device_count = {'GPU': 0}
             # Disable XLA JIT compilation to save memory
             config.graph_options.optimizer_options.global_jit_level = tf.compat.v1.OptimizerOptions.OFF
             # Memory optimization
