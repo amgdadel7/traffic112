@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     libgl1-mesa-glx \
     curl \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install with timeout handling
@@ -49,3 +50,4 @@ EXPOSE 8080
 
 # Run FastAPI server
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT} --log-level info"]
+
