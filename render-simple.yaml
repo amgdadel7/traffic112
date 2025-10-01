@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: traffic-light-detection
+    env: python
+    plan: starter
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements-simple.txt
+    startCommand: chmod +x start.sh && ./start.sh
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
+        value: python
+    healthCheckPath: /health
