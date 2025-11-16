@@ -26,10 +26,10 @@ COPY . .
 COPY mscoco_label_map.pbtxt ./
 
 # Download and extract the model during build
-# This ensures the model is available in the container
+# Use --no-same-owner to avoid chown errors on restricted filesystems (e.g. Render)
 RUN curl -L -o ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
     https://storage.googleapis.com/download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
-    tar -xzf ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
+    tar --no-same-owner -xzf ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
     rm ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
     echo "✅ Model downloaded and extracted successfully"
 
