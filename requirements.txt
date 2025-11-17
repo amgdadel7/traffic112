@@ -2,14 +2,26 @@
 fastapi==0.95.2
 uvicorn[standard]==0.22.0
 python-multipart==0.0.6
-pydantic==1.10.9
+pydantic==1.10.9   # آخر إصدار متوافق مع Python 3.7
 
-# Scientific computing - minimal versions for Heroku
-numpy==1.21.6
-opencv-python-headless==4.5.5.64  # Use headless version (no GUI dependencies)
+# Scientific computing libraries
+numpy==1.21.6          # مطلوب لـ TensorFlow 2.11
+opencv-python==4.5.5.64
 Pillow==9.5.0
+tensorflow==2.11.0     # آخر إصدار يدعم Python 3.7
+matplotlib==3.5.3
+scikit-learn==1.0.2
+scikit-image==0.19.3
+scipy==1.7.3
+pandas==1.3.5
+seaborn==0.11.2
+imageio==2.19.3
+protobuf==3.19.6       # آمن مع TF 2.11
 
-# TensorFlow - using 2.8.0 which is smaller than 2.11.0 but still compatible
-# This version is more compact and should help reduce slug size
-tensorflow-cpu==2.8.0
-protobuf==3.19.6
+# File handling and utilities
+aiofiles==23.1.0
+setuptools==65.5.0
+wheel==0.38.4
+
+# Production server
+gunicorn==20.1.0

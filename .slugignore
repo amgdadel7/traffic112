@@ -88,32 +88,52 @@ htmlcov/
 *.zip
 *.gz
 
-# Exclude TensorFlow examples only (tools/ is needed at runtime for tensorflow.tools.docs)
-tensorflow/examples/
-# NOTE: Do NOT exclude tensorflow/tools/ - it's needed for tensorflow.tools.docs module
+# CRITICAL: Do NOT exclude ANY TensorFlow files or directories!
+# TensorFlow requires tensorflow.tools.docs at runtime, and .slugignore doesn't support negation patterns.
+# Therefore, we must NOT use any wildcard patterns that could match TensorFlow directories.
 
-# Exclude unnecessary Python packages
-site-packages/tensorflow/python/keras/preprocessing/
-site-packages/tensorflow/python/keras/applications/*.h5
-site-packages/tensorflow/python/keras/datasets/
-
-# Exclude documentation in packages
-# IMPORTANT: Do NOT exclude tensorflow/tools/docs/ - TensorFlow needs it at runtime!
-# Only exclude specific docs directories, NOT tensorflow/tools/docs
+# Only exclude documentation from specific non-TensorFlow packages
 site-packages/numpy/docs/
 site-packages/scipy/docs/
 site-packages/pandas/docs/
 site-packages/opencv-python-headless/docs/
-site-packages/*/doc/
-site-packages/*/*.md
-site-packages/*/README*
-site-packages/*/LICENSE*
-site-packages/*/CHANGELOG*
-# NOTE: We intentionally do NOT exclude site-packages/tensorflow/tools/docs/ 
-# because TensorFlow imports tensorflow.tools.docs.doc_controls at runtime
+site-packages/Pillow/docs/
+site-packages/fastapi/docs/
+site-packages/uvicorn/docs/
+site-packages/pydantic/docs/
+# Exclude doc (singular) directories from specific packages only
+site-packages/numpy/doc/
+site-packages/scipy/doc/
+site-packages/pandas/doc/
+# Exclude markdown and text files from specific packages (NOT TensorFlow)
+site-packages/numpy/*.md
+site-packages/scipy/*.md
+site-packages/pandas/*.md
+site-packages/opencv-python-headless/*.md
+site-packages/Pillow/*.md
+site-packages/fastapi/*.md
+site-packages/uvicorn/*.md
+site-packages/pydantic/*.md
+site-packages/numpy/README*
+site-packages/scipy/README*
+site-packages/pandas/README*
+site-packages/numpy/LICENSE*
+site-packages/scipy/LICENSE*
+site-packages/pandas/LICENSE*
+site-packages/numpy/CHANGELOG*
+site-packages/scipy/CHANGELOG*
+site-packages/pandas/CHANGELOG*
 
-# Exclude test data in packages
-site-packages/*/tests/
-site-packages/*/test/
-site-packages/*/test_*.py
-site-packages/*/*_test.py
+# Exclude test data from specific packages only (NOT TensorFlow - it might need its tests)
+site-packages/numpy/tests/
+site-packages/scipy/tests/
+site-packages/pandas/tests/
+site-packages/numpy/test/
+site-packages/scipy/test/
+site-packages/pandas/test/
+site-packages/numpy/test_*.py
+site-packages/scipy/test_*.py
+site-packages/pandas/test_*.py
+site-packages/numpy/*_test.py
+site-packages/scipy/*_test.py
+site-packages/pandas/*_test.py
