@@ -1,10 +1,16 @@
-# Exclude test files
+# Exclude test files (aggressive to save space)
 **/*test*.py
 **/__pycache__/
 **/*.pyc
 **/*.pyo
 **/*.pyd
 .Python
+# Exclude Python bytecode and cache more aggressively
+**/*.py[cod]
+**/$py.class
+**/.mypy_cache/
+**/.dmypy.json
+**/.pytest_cache/
 
 # Exclude documentation
 *.md
@@ -92,7 +98,8 @@ htmlcov/
 # TensorFlow requires tensorflow.tools.docs at runtime, and .slugignore doesn't support negation patterns.
 # Therefore, we must NOT use any wildcard patterns that could match TensorFlow directories.
 
-# Only exclude documentation from specific non-TensorFlow packages
+# Exclude documentation from ALL non-TensorFlow packages (aggressive to save space)
+# Only exclude from packages we know are safe to exclude
 site-packages/numpy/docs/
 site-packages/scipy/docs/
 site-packages/pandas/docs/
@@ -101,11 +108,10 @@ site-packages/Pillow/docs/
 site-packages/fastapi/docs/
 site-packages/uvicorn/docs/
 site-packages/pydantic/docs/
-# Exclude doc (singular) directories from specific packages only
 site-packages/numpy/doc/
 site-packages/scipy/doc/
 site-packages/pandas/doc/
-# Exclude markdown and text files from specific packages (NOT TensorFlow)
+# Exclude all markdown and text files from non-TensorFlow packages
 site-packages/numpy/*.md
 site-packages/scipy/*.md
 site-packages/pandas/*.md
@@ -123,6 +129,11 @@ site-packages/pandas/LICENSE*
 site-packages/numpy/CHANGELOG*
 site-packages/scipy/CHANGELOG*
 site-packages/pandas/CHANGELOG*
+# Exclude examples and demos from packages
+site-packages/numpy/examples/
+site-packages/scipy/examples/
+site-packages/pandas/examples/
+site-packages/opencv-python-headless/samples/
 
 # Exclude test data from specific packages only (NOT TensorFlow - it might need its tests)
 site-packages/numpy/tests/

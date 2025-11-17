@@ -9,7 +9,7 @@ numpy==1.21.6
 opencv-python-headless==4.5.5.64  # Use headless version (no GUI dependencies)
 Pillow==9.5.0
 
-# TensorFlow - using 2.8.0 which is smaller than 2.11.0 but still compatible
-# This version is more compact and should help reduce slug size
-tensorflow==2.8.0
+# TensorFlow - using 2.6.0 CPU-only for smaller size (compatible with code)
+# CPU-only version is significantly smaller than full TensorFlow
+tensorflow-cpu==2.6.0
 protobuf==3.19.6
