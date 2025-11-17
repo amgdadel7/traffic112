@@ -88,9 +88,9 @@ htmlcov/
 *.zip
 *.gz
 
-# Exclude TensorFlow examples and extras (if any)
+# Exclude TensorFlow examples only (tools/ is needed at runtime for tensorflow.tools.docs)
 tensorflow/examples/
-tensorflow/tools/
+# NOTE: Do NOT exclude tensorflow/tools/ - it's needed for tensorflow.tools.docs module
 
 # Exclude unnecessary Python packages
 site-packages/tensorflow/python/keras/preprocessing/
