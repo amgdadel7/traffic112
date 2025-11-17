@@ -3,13 +3,25 @@
 
 echo "🧹 Cleaning up to reduce slug size..."
 
-# Remove TensorFlow examples and unnecessary files
-find . -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true
-find . -type d -name "tests" -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
-find . -type f -name "*.md" -path "*/site-packages/*" -delete 2>/dev/null || true
-find . -type f -name "README*" -path "*/site-packages/*" -delete 2>/dev/null || true
-find . -type f -name "LICENSE*" -path "*/site-packages/*" -delete 2>/dev/null || true
-find . -type f -name "CHANGELOG*" -path "*/site-packages/*" -delete 2>/dev/null || true
+# Remove examples and unnecessary files from non-TensorFlow packages only
+find . -type d -name "examples" -path "*/site-packages/numpy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "examples" -path "*/site-packages/scipy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "examples" -path "*/site-packages/pandas/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "tests" -path "*/site-packages/numpy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "tests" -path "*/site-packages/scipy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "tests" -path "*/site-packages/pandas/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type f -name "*.md" -path "*/site-packages/numpy/*" -delete 2>/dev/null || true
+find . -type f -name "*.md" -path "*/site-packages/scipy/*" -delete 2>/dev/null || true
+find . -type f -name "*.md" -path "*/site-packages/pandas/*" -delete 2>/dev/null || true
+find . -type f -name "README*" -path "*/site-packages/numpy/*" -delete 2>/dev/null || true
+find . -type f -name "README*" -path "*/site-packages/scipy/*" -delete 2>/dev/null || true
+find . -type f -name "README*" -path "*/site-packages/pandas/*" -delete 2>/dev/null || true
+find . -type f -name "LICENSE*" -path "*/site-packages/numpy/*" -delete 2>/dev/null || true
+find . -type f -name "LICENSE*" -path "*/site-packages/scipy/*" -delete 2>/dev/null || true
+find . -type f -name "LICENSE*" -path "*/site-packages/pandas/*" -delete 2>/dev/null || true
+find . -type f -name "CHANGELOG*" -path "*/site-packages/numpy/*" -delete 2>/dev/null || true
+find . -type f -name "CHANGELOG*" -path "*/site-packages/scipy/*" -delete 2>/dev/null || true
+find . -type f -name "CHANGELOG*" -path "*/site-packages/pandas/*" -delete 2>/dev/null || true
 
 # Remove __pycache__ directories
 find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
@@ -18,22 +30,28 @@ find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find . -type f -name "*.pyc" -delete 2>/dev/null || true
 find . -type f -name "*.pyo" -delete 2>/dev/null || true
 
-# Remove test files in site-packages
-find . -type f -name "*_test.py" -path "*/site-packages/*" -delete 2>/dev/null || true
-find . -type f -name "test_*.py" -path "*/site-packages/*" -delete 2>/dev/null || true
+# Remove test files from non-TensorFlow packages only
+find . -type f -name "*_test.py" -path "*/site-packages/numpy/*" -delete 2>/dev/null || true
+find . -type f -name "*_test.py" -path "*/site-packages/scipy/*" -delete 2>/dev/null || true
+find . -type f -name "*_test.py" -path "*/site-packages/pandas/*" -delete 2>/dev/null || true
+find . -type f -name "test_*.py" -path "*/site-packages/numpy/*" -delete 2>/dev/null || true
+find . -type f -name "test_*.py" -path "*/site-packages/scipy/*" -delete 2>/dev/null || true
+find . -type f -name "test_*.py" -path "*/site-packages/pandas/*" -delete 2>/dev/null || true
 
-# Remove TensorFlow unnecessary components if they exist
+# CRITICAL: Do NOT remove tensorflow/tools - TensorFlow needs tensorflow.tools.docs at runtime!
+# Only remove TensorFlow examples (safe to exclude)
 if [ -d ".heroku/python/lib/python*/site-packages/tensorflow/examples" ]; then
     rm -rf .heroku/python/lib/python*/site-packages/tensorflow/examples
 fi
 
-if [ -d ".heroku/python/lib/python*/site-packages/tensorflow/tools" ]; then
-    rm -rf .heroku/python/lib/python*/site-packages/tensorflow/tools
-fi
-
-# Remove documentation directories
-find . -type d -name "docs" -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
-find . -type d -name "doc" -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
+# Remove documentation directories from non-TensorFlow packages only
+# Do NOT remove tensorflow/tools/docs/ - it's required!
+find . -type d -name "docs" -path "*/site-packages/numpy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "docs" -path "*/site-packages/scipy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "docs" -path "*/site-packages/pandas/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "doc" -path "*/site-packages/numpy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "doc" -path "*/site-packages/scipy/*" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name "doc" -path "*/site-packages/pandas/*" -exec rm -rf {} + 2>/dev/null || true
 
 echo "✅ Cleanup complete!"
 

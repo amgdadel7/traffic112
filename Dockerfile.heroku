@@ -1,0 +1,25 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install only essential system libs
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy pruned requirements
+COPY requirements-heroku.txt .
+RUN pip install --no-cache-dir -r requirements-heroku.txt
+
+# Copy app and label map
+COPY . .
+COPY mscoco_label_map.pbtxt ./
+
+# Model will be downloaded at runtime (not during build to reduce image size)
+# This allows faster builds and the model downloads on first request
+
+# Use Heroku's PORT env var
+ENV PORT=8080
+EXPOSE $PORT
+
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT
