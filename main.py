@@ -170,79 +170,96 @@ def _load_model_attempt():
             print("✅ Model already available in container (downloaded during build), skipping download...")
             print(f"📁 Model directory contents: {os.listdir(MODEL_NAME) if os.path.exists(MODEL_NAME) else 'Directory not found'}")
         elif not os.path.exists(MODEL_NAME):
-            print("📥 Downloading model (this may take a while)...")
-            print(f"📁 Current directory: {os.getcwd()}")
-            print(f"📁 Looking for model: {MODEL_NAME}")
-            
-            # Check if we're in Cloud Run environment
-            is_cloud_run = os.environ.get('K_SERVICE') is not None
-            if is_cloud_run:
-                print("☁️ Cloud Run environment detected - using optimized download strategy")
-            
-            # Updated download URLs - TensorFlow has moved model hosting
-            DOWNLOAD_URLS = [
-                f'https://storage.googleapis.com/download.tensorflow.org/models/object_detection/{MODEL_FILE}',
-                f'https://github.com/tensorflow/models/raw/master/research/object_detection/test_data/{MODEL_FILE}',
-                f'http://download.tensorflow.org/models/object_detection/{MODEL_FILE}'
-            ]
-            
-            download_success = False
-            
-            for i, download_url in enumerate(DOWNLOAD_URLS):
-                try:
-                    print(f"🌐 Trying download URL {i+1}/{len(DOWNLOAD_URLS)}: {download_url}")
-                    # Add timeout and better error handling
-                    import urllib.request
-                    import urllib.error
-                    
-                    req = urllib.request.Request(download_url)
-                    req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
-                    
-                    # Longer timeout for Cloud Run
-                    timeout = 120 if is_cloud_run else 60
-                    with urllib.request.urlopen(req, timeout=timeout) as response:
-                        with open(MODEL_FILE, 'wb') as f:
-                            # Read in chunks to handle large files better
-                            chunk_size = 8192
-                            while True:
-                                chunk = response.read(chunk_size)
-                                if not chunk:
-                                    break
-                                f.write(chunk)
-                    
-                    print("✅ Model downloaded successfully!")
-                    download_success = True
-                    break
-                except Exception as e:
-                    print(f"❌ Download failed from URL {i+1}: {str(e)}")
-                    if i < len(DOWNLOAD_URLS) - 1:
-                        print("🔄 Trying next URL...")
-                        # Wait before retry in Cloud Run
-                        if is_cloud_run:
-                            import time
-                            time.sleep(5)
-                    continue
-            
-            if not download_success:
-                raise RuntimeError("All download URLs failed. Please check your internet connection or download the model manually.")
-            
-            print("📦 Extracting model...")
-            tar_file = tarfile.open(MODEL_FILE)
-            tar_file.extractall()
-            tar_file.close()
-            print("✅ Model extracted successfully!")
-            
-            # Clean up tar file to save space
+            # First, check if local tar.gz file exists
             if os.path.exists(MODEL_FILE):
-                os.remove(MODEL_FILE)
-                print("🧹 Cleaned up tar file to save space")
-            
-            # Verify model files exist
-            if os.path.exists(PATH_TO_CKPT):
-                print(f"✅ Model file verified: {PATH_TO_CKPT}")
+                print(f"📦 Found local model file: {MODEL_FILE}")
+                print("📦 Extracting local model file...")
+                tar_file = tarfile.open(MODEL_FILE)
+                tar_file.extractall()
+                tar_file.close()
+                print("✅ Model extracted successfully from local file!")
+                
+                # Verify model files exist
+                if os.path.exists(PATH_TO_CKPT):
+                    print(f"✅ Model file verified: {PATH_TO_CKPT}")
+                else:
+                    print(f"❌ Model file not found: {PATH_TO_CKPT}")
+                    raise RuntimeError(f"Model file not found after extraction: {PATH_TO_CKPT}")
             else:
-                print(f"❌ Model file not found: {PATH_TO_CKPT}")
-                raise RuntimeError(f"Model file not found after extraction: {PATH_TO_CKPT}")
+                # Local file doesn't exist, download it
+                print("📥 Downloading model (this may take a while)...")
+                print(f"📁 Current directory: {os.getcwd()}")
+                print(f"📁 Looking for model: {MODEL_NAME}")
+                
+                # Check if we're in Cloud Run environment
+                is_cloud_run = os.environ.get('K_SERVICE') is not None
+                if is_cloud_run:
+                    print("☁️ Cloud Run environment detected - using optimized download strategy")
+                
+                # Updated download URLs - TensorFlow has moved model hosting
+                DOWNLOAD_URLS = [
+                    f'https://storage.googleapis.com/download.tensorflow.org/models/object_detection/{MODEL_FILE}',
+                    f'https://github.com/tensorflow/models/raw/master/research/object_detection/test_data/{MODEL_FILE}',
+                    f'http://download.tensorflow.org/models/object_detection/{MODEL_FILE}'
+                ]
+                
+                download_success = False
+                
+                for i, download_url in enumerate(DOWNLOAD_URLS):
+                    try:
+                        print(f"🌐 Trying download URL {i+1}/{len(DOWNLOAD_URLS)}: {download_url}")
+                        # Add timeout and better error handling
+                        import urllib.request
+                        import urllib.error
+                        
+                        req = urllib.request.Request(download_url)
+                        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+                        
+                        # Longer timeout for Cloud Run
+                        timeout = 120 if is_cloud_run else 60
+                        with urllib.request.urlopen(req, timeout=timeout) as response:
+                            with open(MODEL_FILE, 'wb') as f:
+                                # Read in chunks to handle large files better
+                                chunk_size = 8192
+                                while True:
+                                    chunk = response.read(chunk_size)
+                                    if not chunk:
+                                        break
+                                    f.write(chunk)
+                        
+                        print("✅ Model downloaded successfully!")
+                        download_success = True
+                        break
+                    except Exception as e:
+                        print(f"❌ Download failed from URL {i+1}: {str(e)}")
+                        if i < len(DOWNLOAD_URLS) - 1:
+                            print("🔄 Trying next URL...")
+                            # Wait before retry in Cloud Run
+                            if is_cloud_run:
+                                import time
+                                time.sleep(5)
+                        continue
+                
+                if not download_success:
+                    raise RuntimeError("All download URLs failed. Please check your internet connection or download the model manually.")
+                
+                print("📦 Extracting model...")
+                tar_file = tarfile.open(MODEL_FILE)
+                tar_file.extractall()
+                tar_file.close()
+                print("✅ Model extracted successfully!")
+                
+                # Clean up tar file to save space (optional - comment out if you want to keep it)
+                # if os.path.exists(MODEL_FILE):
+                #     os.remove(MODEL_FILE)
+                #     print("🧹 Cleaned up tar file to save space")
+                
+                # Verify model files exist
+                if os.path.exists(PATH_TO_CKPT):
+                    print(f"✅ Model file verified: {PATH_TO_CKPT}")
+                else:
+                    print(f"❌ Model file not found: {PATH_TO_CKPT}")
+                    raise RuntimeError(f"Model file not found after extraction: {PATH_TO_CKPT}")
         else:
             print("✅ Model already exists, skipping download...")
             print(f"📁 Model directory contents: {os.listdir(MODEL_NAME) if os.path.exists(MODEL_NAME) else 'Directory not found'}")
