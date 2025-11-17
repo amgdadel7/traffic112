@@ -15,11 +15,8 @@ import tensorflow as tf
 from utils import label_map_util
 import urllib.request
 import tarfile
-import gc
 
 from pydantic import BaseModel
-import time
-import urllib.parse
 
 app = FastAPI(
     title="Traffic Light Detection API",
@@ -48,7 +45,6 @@ sess = None
 category_index = None
 MODEL_LOADED = False
 MODEL_LOADING_ERROR = None
-MODEL_READY_COND = threading.Condition()
 
 # Utility functions
 def detect_red_and_yellow(img, threshold=0.01):
@@ -138,7 +134,7 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
         raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
 
 def load_model():
-    global detection_graph, sess, category_index, MODEL_LOADED, MODEL_LOADING_ERROR, MODEL_READY_COND
+    global detection_graph, sess, category_index, MODEL_LOADED, MODEL_LOADING_ERROR
     
     # Retry mechanism for cloud environments
     max_retries = 3
@@ -146,13 +142,12 @@ def load_model():
         try:
             print(f"🔄 Model loading attempt {attempt + 1}/{max_retries}")
             _load_model_attempt()
-            with MODEL_READY_COND:
-                MODEL_READY_COND.notify_all()
             return  # Success, exit the function
         except Exception as e:
             print(f"❌ Attempt {attempt + 1} failed: {str(e)}")
             if attempt < max_retries - 1:
                 print(f"⏳ Retrying in 10 seconds...")
+                import time
                 time.sleep(10)
             else:
                 print(f"💥 All {max_retries} attempts failed")
@@ -161,7 +156,7 @@ def load_model():
                 traceback.print_exc()
 
 def _load_model_attempt():
-    global detection_graph, sess, category_index, MODEL_LOADED, MODEL_LOADING_ERROR, MODEL_READY_COND
+    global detection_graph, sess, category_index, MODEL_LOADED, MODEL_LOADING_ERROR
     try:
         MODEL_NAME = 'ssd_mobilenet_v1_coco_11_06_2017'
         MODEL_FILE = MODEL_NAME + '.tar.gz'
@@ -344,10 +339,9 @@ def _load_model_attempt():
         MODEL_LOADED = True
         MODEL_LOADING_ERROR = None
         print("🎉 Model loaded successfully and ready for inference!")
-        with MODEL_READY_COND:
-            MODEL_READY_COND.notify_all()
         
         # Force garbage collection to free memory
+        import gc
         gc.collect()
         print("🧹 Performed garbage collection to free memory")
     except Exception as e:
@@ -355,22 +349,6 @@ def _load_model_attempt():
         MODEL_LOADING_ERROR = str(e)
         traceback.print_exc()
         print(f"❌ Model failed to load: {MODEL_LOADING_ERROR}")
-
-def wait_for_model_ready(timeout_seconds: int = 60) -> None:
-    """Wait for the model to become ready up to timeout. Raises HTTPException 503 on timeout or error."""
-    global MODEL_LOADED, MODEL_LOADING_ERROR, MODEL_READY_COND
-    if MODEL_LOADED:
-        return
-    deadline = time.time() + timeout_seconds
-    with MODEL_READY_COND:
-        while not MODEL_LOADED and MODEL_LOADING_ERROR is None and time.time() < deadline:
-            remaining = max(0.0, deadline - time.time())
-            # Wait in small increments to allow notify_all to wake us early
-            MODEL_READY_COND.wait(timeout=min(remaining, 1.0))
-    if not MODEL_LOADED:
-        if MODEL_LOADING_ERROR:
-            raise HTTPException(status_code=503, detail=f"Model failed to load: {MODEL_LOADING_ERROR}")
-        raise HTTPException(status_code=503, detail="Model is still loading, please retry shortly.")
 
 # Startup: spawn background loader thread so FastAPI responds immediately
 @app.on_event("startup")
@@ -396,7 +374,13 @@ async def startup_event():
     print("✅ Model loader thread started (loading in background)")
     
     # Wait a bit for initial model loading based on environment
-    wait_time = int(os.environ.get('INITIAL_LOAD_WAIT', '20'))
+    import time
+    if is_cloud_run:
+        wait_time = 30  # More time for Cloud Run
+    elif is_docker:
+        wait_time = 15  # Medium time for Docker
+    else:
+        wait_time = 5   # Short time for local
     
     print(f"⏳ Waiting {wait_time} seconds for initial model loading...")
     time.sleep(wait_time)
@@ -510,7 +494,6 @@ async def reload_model():
 @app.post("/detect", response_model=DetectionResponse)
 async def detect_traffic_light(file: UploadFile = File(...)):
     try:
-        wait_for_model_ready(timeout_seconds=60)
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
         if image.mode != 'RGB':
@@ -526,7 +509,6 @@ async def detect_traffic_light(file: UploadFile = File(...)):
 @app.post("/detect-base64", response_model=DetectionResponse)
 async def detect_traffic_light_base64(request: Base64ImageRequest):
     try:
-        wait_for_model_ready(timeout_seconds=60)
         image = base64_to_image(request.image_base64, request.image_format)
         result = detect_traffic_lights_in_image(image)
         return DetectionResponse(**result)
@@ -539,26 +521,8 @@ async def detect_traffic_light_base64(request: Base64ImageRequest):
 @app.post("/detect-url", response_model=DetectionResponse)
 async def detect_traffic_light_url(image_url: str):
     try:
-        wait_for_model_ready(timeout_seconds=60)
-
-        # Handle common redirect wrapper (e.g., Google /url? parameters)
-        try:
-            parsed = urllib.parse.urlparse(image_url)
-            qs = urllib.parse.parse_qs(parsed.query)
-            if parsed.netloc.endswith("google.com") and parsed.path.strip("/").lower() == "url" and "url" in qs:
-                image_url = qs["url"][0]
-        except Exception:
-            pass
-
-        # Build request with headers and follow redirects
-        req = urllib.request.Request(image_url, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36'
-        })
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            content_type = resp.headers.get('Content-Type', '')
-            if not content_type.lower().startswith('image/'):
-                raise HTTPException(status_code=400, detail=f"URL does not point to an image (Content-Type: {content_type}). Provide a direct image URL.")
-            image_data = resp.read()
+        response = urllib.request.urlopen(image_url)
+        image_data = response.read()
         image = Image.open(io.BytesIO(image_data))
         if image.mode != 'RGB':
             image = image.convert('RGB')

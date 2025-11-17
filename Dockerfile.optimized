@@ -20,10 +20,9 @@ RUN pip install --no-cache-dir --upgrade pip==22.3.1 setuptools==65.5.0 wheel \
     && pip install --no-cache-dir --timeout 1000 --retries 5 -r requirements.txt
 
 # Download model during build
-# Use --no-same-owner to avoid chown errors on restricted filesystems (e.g. Render)
-RUN curl -L -o ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+RUN wget -O ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
     https://storage.googleapis.com/download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
-    tar --no-same-owner -xzf ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
+    tar -xzf ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
     rm ssd_mobilenet_v1_coco_11_06_2017.tar.gz
 
 # Final stage
