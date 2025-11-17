@@ -9,8 +9,12 @@
 # Exclude documentation
 *.md
 !README.md
+
+# Exclude text files BUT keep requirements files (Heroku needs requirements.txt)
 *.txt
-!requirements*.txt
+!requirements.txt
+!requirements-heroku.txt
+!requirements-*.txt
 !Procfile
 
 # Exclude notebooks
