@@ -10,12 +10,14 @@
 *.md
 !README.md
 
-# Exclude text files BUT keep requirements files (Heroku needs requirements.txt)
-*.txt
-!requirements.txt
-!requirements-heroku.txt
-!requirements-*.txt
-!Procfile
+# IMPORTANT: Do NOT exclude requirements.txt - Heroku needs it!
+# Exclude specific documentation text files only
+LICENSE.txt
+CHANGELOG.txt
+HISTORY.txt
+*.md.txt
+# Keep requirements files (required by Heroku)
+# Keep Procfile (required by Heroku)
 
 # Exclude notebooks
 *.ipynb
