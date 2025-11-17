@@ -1,0 +1,106 @@
+# Exclude test files
+**/*test*.py
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+
+# Exclude documentation
+*.md
+!README.md
+*.txt
+!requirements*.txt
+!Procfile
+
+# Exclude notebooks
+*.ipynb
+
+# Exclude Docker files
+Dockerfile*
+docker-compose.yml
+.dockerignore
+
+# Exclude deployment scripts
+deploy*.sh
+deploy*.ps1
+deploy*.bat
+build*.sh
+build*.ps1
+test*.sh
+test*.ps1
+*.yaml
+!app.yaml
+
+# Exclude large model files (will be downloaded at runtime)
+*.tar.gz
+*.pb
+ssd_mobilenet_v1_coco_11_06_2017/
+faster_rcnn_resnet101_coco_11_06_2017/
+
+# Exclude development files
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Exclude environment files
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# Exclude static files if not needed
+static/
+output_images/
+
+# Exclude utils test files (keep only necessary utils)
+utils/*_test.py
+
+# Exclude backup files
+**/*backup*
+**/*(backup)*
+
+# Exclude reflex app if not needed for API
+reflex_app/
+
+# Exclude Python cache
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Note: Don't exclude .so/.dylib/.dll as TensorFlow needs these
+# Exclude only unnecessary large files
+*.tar.gz
+*.zip
+*.gz
+
+# Exclude TensorFlow examples and extras (if any)
+tensorflow/examples/
+tensorflow/tools/
+
+# Exclude unnecessary Python packages
+site-packages/tensorflow/python/keras/preprocessing/
+site-packages/tensorflow/python/keras/applications/*.h5
+site-packages/tensorflow/python/keras/datasets/
+
+# Exclude documentation in packages
+site-packages/*/docs/
+site-packages/*/doc/
+site-packages/*/*.md
+site-packages/*/README*
+site-packages/*/LICENSE*
+site-packages/*/CHANGELOG*
+
+# Exclude test data in packages
+site-packages/*/tests/
+site-packages/*/test/
+site-packages/*/test_*.py
+site-packages/*/*_test.py
