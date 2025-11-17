@@ -27,11 +27,16 @@ COPY mscoco_label_map.pbtxt ./
 
 # Download and extract the model during build
 # This ensures the model is available in the container
-RUN wget -O ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
-    https://storage.googleapis.com/download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
-    tar -xzf ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
-    rm ssd_mobilenet_v1_coco_11_06_2017.tar.gz && \
-    echo "✅ Model downloaded and extracted successfully"
+# Using curl with retries and fallback URLs
+RUN curl -L --retry 5 --retry-delay 10 --max-time 300 \
+    -o ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+    https://storage.googleapis.com/download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+    || curl -L --retry 5 --retry-delay 10 --max-time 300 \
+    -o ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+    https://github.com/tensorflow/models/raw/master/research/object_detection/test_data/ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+    && tar -xzf ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+    && rm ssd_mobilenet_v1_coco_11_06_2017.tar.gz \
+    && echo "✅ Model downloaded and extracted successfully"
 
 # Verify model files exist
 RUN ls -la ssd_mobilenet_v1_coco_11_06_2017/ && \
