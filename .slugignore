@@ -98,12 +98,19 @@ site-packages/tensorflow/python/keras/applications/*.h5
 site-packages/tensorflow/python/keras/datasets/
 
 # Exclude documentation in packages
-site-packages/*/docs/
+# IMPORTANT: Do NOT exclude tensorflow/tools/docs/ - TensorFlow needs it at runtime!
+# Only exclude specific docs directories, NOT tensorflow/tools/docs
+site-packages/numpy/docs/
+site-packages/scipy/docs/
+site-packages/pandas/docs/
+site-packages/opencv-python-headless/docs/
 site-packages/*/doc/
 site-packages/*/*.md
 site-packages/*/README*
 site-packages/*/LICENSE*
 site-packages/*/CHANGELOG*
+# NOTE: We intentionally do NOT exclude site-packages/tensorflow/tools/docs/ 
+# because TensorFlow imports tensorflow.tools.docs.doc_controls at runtime
 
 # Exclude test data in packages
 site-packages/*/tests/
