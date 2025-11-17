@@ -11,5 +11,5 @@ Pillow==9.5.0
 
 # TensorFlow - using 2.6.0 CPU-only for smaller size (compatible with code)
 # CPU-only version is significantly smaller than full TensorFlow
-tensorflow-cpu==2.6.0
+tensorflow-cpu==2.11.0
 protobuf==3.19.6
