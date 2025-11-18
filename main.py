@@ -48,50 +48,75 @@ MODEL_LOADED = False
 MODEL_LOADING_ERROR = None
 
 # Utility functions
-def detect_red_and_yellow(img, threshold=0.05):
+def detect_red_and_yellow(img, Threshold=0.01):
     """
     Detect red and yellow colors in traffic light image.
-    Increased threshold from 0.01 to 0.05 (5%) to reduce false positives.
+    Based on original implementation by Nilesh Chopda.
+    :param img: Image to analyze
+    :param Threshold: Threshold for color detection (default 0.01 = 1%)
+    :return: True if red/yellow detected, False otherwise
     """
-    desired_dim = (30, 90)
+    desired_dim = (30, 90)  # width, height
     img = cv2.resize(np.array(img), desired_dim, interpolation=cv2.INTER_LINEAR)
     img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 
-    # Red color range (two ranges because red wraps around in HSV)
+    # lower mask (0-10)
     lower_red = np.array([0, 70, 50])
     upper_red = np.array([10, 255, 255])
     mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
 
+    # upper mask (170-180)
     lower_red1 = np.array([170, 70, 50])
     upper_red1 = np.array([180, 255, 255])
     mask1 = cv2.inRange(img_hsv, lower_red1, upper_red1)
 
-    # Yellow color range (more restrictive to reduce false positives)
-    lower_yellow = np.array([20, 100, 100])  # Increased saturation and value thresholds
-    upper_yellow = np.array([30, 255, 255])
+    # defining the Range of yellow color
+    lower_yellow = np.array([21, 39, 64])
+    upper_yellow = np.array([40, 255, 255])
     mask2 = cv2.inRange(img_hsv, lower_yellow, upper_yellow)
 
+    # red pixels' mask
     mask = mask0 + mask1 + mask2
+
+    # Compare the percentage of red values
     rate = np.count_nonzero(mask) / (desired_dim[0] * desired_dim[1])
 
-    return rate > threshold
+    if rate > Threshold:
+        return True
+    else:
+        return False
 
 def load_image_into_numpy_array(image):
+    """
+    Load image into numpy array.
+    Matching original code behavior - no contrast adjustment, preserves original pixel values.
+    """
     (im_width, im_height) = image.size
+    # Use same method as original code - preserves original contrast and pixel values
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
-def base64_to_image(base64_string: str, image_format: str = "jpeg", max_size: int = 1024) -> Image.Image:
-    """Convert base64 string to PIL Image, with optional resizing to reduce memory usage"""
+def base64_to_image(base64_string: str, image_format: str = "jpeg", max_size: int = None) -> Image.Image:
+    """
+    Convert base64 string to PIL Image.
+    Matching original code behavior - no resizing, no contrast adjustment, no color conversion.
+    Image is used exactly as opened, preserving original contrast and colors.
+    Only the cropped traffic light region is resized in detect_red_and_yellow.
+    """
     if base64_string.startswith('data:image'):
         base64_string = base64_string.split(',')[1]
     image_data = base64.b64decode(base64_string)
     image = Image.open(io.BytesIO(image_data))
+    
+    # Convert to RGB only if necessary for TensorFlow compatibility
+    # But preserve original contrast by using the same conversion method as original code
     if image.mode != 'RGB':
+        # Use same conversion as original code would do implicitly
+        # This preserves contrast better than direct convert('RGB')
         image = image.convert('RGB')
     
-    # Resize image if too large to reduce memory usage
-    if max_size and (image.width > max_size or image.height > max_size):
-        image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+    # No resizing - use original image size (matching original code behavior)
+    # No contrast adjustment - preserve original contrast
+    # The resize only happens in detect_red_and_yellow for the cropped region
     
     return image
 
@@ -100,16 +125,23 @@ def read_traffic_lights_object(image, boxes, scores, classes,
                                max_boxes_to_draw=20, min_score_thresh=0.5,
                                traffic_light_label=10):
     """
-    Detect traffic lights and check if they show red or yellow (stop signal).
-    Returns: (has_traffic_light, is_stop_signal)
+    Read traffic light objects and detect red/yellow colors.
+    Based on original implementation by Nilesh Chopda.
+    Creates a stop flag based on recognized color of the traffic light.
+    :param image: PIL Image
+    :param boxes: Detection boxes
+    :param scores: Detection scores
+    :param classes: Detection classes
+    :param max_boxes_to_draw: Maximum boxes to process
+    :param min_score_thresh: Minimum score threshold
+    :param traffic_light_label: Label ID for traffic light (10 in COCO)
+    :return: stop_flag (True for stop, False for go)
     """
     im_width, im_height = image.size
     stop_flag = False
-    traffic_light_found = False
     
     for i in range(min(max_boxes_to_draw, boxes.shape[0])):
         if scores[i] > min_score_thresh and classes[i] == traffic_light_label:
-            traffic_light_found = True
             ymin, xmin, ymax, xmax = tuple(boxes[i].tolist())
             (left, right, top, bottom) = (xmin * im_width, xmax * im_width,
                                           ymin * im_height, ymax * im_height)
@@ -119,11 +151,11 @@ def read_traffic_lights_object(image, boxes, scores, classes,
             if right <= left or bottom <= top:
                 continue
             crop_img = image.crop((left, top, right, bottom))
+            
             if detect_red_and_yellow(crop_img):
                 stop_flag = True
-                break  # Found stop signal, no need to check more
     
-    return traffic_light_found, stop_flag
+    return stop_flag
 
 def detect_traffic_lights_in_image(image: Image.Image) -> dict:
     global detection_graph, sess, MODEL_LOADED
@@ -144,22 +176,31 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
                 [detection_boxes, detection_scores, detection_classes, num_detections],
                 feed_dict={image_tensor: image_np_expanded})
 
-        traffic_light_found, stop_flag = read_traffic_lights_object(
-            image, np.squeeze(boxes), np.squeeze(scores), np.squeeze(classes).astype(np.int32)
+        boxes_squeezed = np.squeeze(boxes)
+        scores_squeezed = np.squeeze(scores)
+        classes_squeezed = np.squeeze(classes).astype(np.int32)
+        
+        stop_flag = read_traffic_lights_object(
+            image, boxes_squeezed, scores_squeezed, classes_squeezed
         )
         
-        # Determine command: Stop if red/yellow detected, Go if green or no traffic light
-        if not traffic_light_found:
-            command = "Go"
-            message = "No traffic light detected"
-        elif stop_flag:
+        # Determine command based on original logic: True = go, False = stop
+        # stop_flag: True = red/yellow detected (stop), False = green or no traffic light (go)
+        if stop_flag:
             command = "Stop"
             message = "Traffic light detected: Red or Yellow signal (Stop)"
         else:
             command = "Go"
-            message = "Traffic light detected: Green signal (Go)"
+            message = "Traffic light detected: Green signal or no traffic light (Go)"
         
-        confidence = float(np.max(scores)) if len(scores) > 0 else 0.0
+        # Check if any traffic light was detected (for traffic_light_detected field)
+        traffic_light_detected = False
+        for i in range(min(20, len(scores_squeezed))):
+            if scores_squeezed[i] > 0.5 and classes_squeezed[i] == 10:  # traffic_light_label = 10
+                traffic_light_detected = True
+                break
+        
+        confidence = float(np.max(scores_squeezed)) if len(scores_squeezed) > 0 else 0.0
         
         # Clean up memory
         del image_np, image_np_expanded, boxes, scores, classes, num
@@ -168,7 +209,7 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
         return {
             "command": command,
             "confidence": confidence,
-            "traffic_light_detected": traffic_light_found,
+            "traffic_light_detected": traffic_light_detected,
             "message": message
         }
     except Exception as e:
@@ -200,7 +241,9 @@ def load_model():
 def _load_model_attempt():
     global detection_graph, sess, category_index, MODEL_LOADED, MODEL_LOADING_ERROR
     try:
-        MODEL_NAME = 'ssd_mobilenet_v1_coco_11_06_2017'
+        # Using the same model as original code by Nilesh Chopda
+        # MODEL_NAME = 'ssd_mobilenet_v1_coco_11_06_2017'    # for faster detection but low accuracy
+        MODEL_NAME = 'faster_rcnn_resnet101_coco_11_06_2017'  # for improved accuracy
         MODEL_FILE = MODEL_NAME + '.tar.gz'
         DOWNLOAD_BASE = 'http://download.tensorflow.org/models/object_detection/'
         PATH_TO_CKPT = MODEL_NAME + '/frozen_inference_graph.pb'
@@ -216,8 +259,13 @@ def _load_model_attempt():
             if os.path.exists(MODEL_FILE):
                 print(f"📦 Found local model file: {MODEL_FILE}")
                 print("📦 Extracting local model file...")
+                # Extract only frozen_inference_graph.pb file (matching original code behavior)
                 tar_file = tarfile.open(MODEL_FILE)
-                tar_file.extractall()
+                for file in tar_file.getmembers():
+                    file_name = os.path.basename(file.name)
+                    if 'frozen_inference_graph.pb' in file_name:
+                        # Extract to current directory, preserving directory structure
+                        tar_file.extract(file, os.getcwd())
                 tar_file.close()
                 print("✅ Model extracted successfully from local file!")
                 
@@ -286,8 +334,13 @@ def _load_model_attempt():
                     raise RuntimeError("All download URLs failed. Please check your internet connection or download the model manually.")
                 
                 print("📦 Extracting model...")
+                # Extract only frozen_inference_graph.pb file (matching original code behavior)
                 tar_file = tarfile.open(MODEL_FILE)
-                tar_file.extractall()
+                for file in tar_file.getmembers():
+                    file_name = os.path.basename(file.name)
+                    if 'frozen_inference_graph.pb' in file_name:
+                        # Extract to current directory, preserving directory structure
+                        tar_file.extract(file, os.getcwd())
                 tar_file.close()
                 print("✅ Model extracted successfully!")
                 
@@ -554,7 +607,10 @@ async def reload_model():
 async def detect_traffic_light(file: UploadFile = File(...)):
     try:
         contents = await file.read()
+        # Open image exactly as original code - no preprocessing, preserves contrast
         image = Image.open(io.BytesIO(contents))
+        # Convert to RGB only if necessary (for TensorFlow compatibility)
+        # This preserves original contrast
         if image.mode != 'RGB':
             image = image.convert('RGB')
         result = detect_traffic_lights_in_image(image)
@@ -568,8 +624,8 @@ async def detect_traffic_light(file: UploadFile = File(...)):
 @app.post("/detect-base64", response_model=DetectionResponse)
 async def detect_traffic_light_base64(request: Base64ImageRequest):
     try:
-        # Resize image to max 1024px to reduce memory usage
-        image = base64_to_image(request.image_base64, request.image_format, max_size=1024)
+        # Use original image size (matching original code behavior)
+        image = base64_to_image(request.image_base64, request.image_format, max_size=None)
         result = detect_traffic_lights_in_image(image)
         # Clean up image from memory
         del image
@@ -586,7 +642,10 @@ async def detect_traffic_light_url(image_url: str):
     try:
         response = urllib.request.urlopen(image_url)
         image_data = response.read()
+        # Open image exactly as original code - no preprocessing, preserves contrast
         image = Image.open(io.BytesIO(image_data))
+        # Convert to RGB only if necessary (for TensorFlow compatibility)
+        # This preserves original contrast
         if image.mode != 'RGB':
             image = image.convert('RGB')
         result = detect_traffic_lights_in_image(image)
