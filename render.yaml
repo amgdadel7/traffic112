@@ -11,6 +11,6 @@ services:
       - key: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
         value: python
       - key: PYTHON_VERSION
-        value: 3.7
+        value: 3.9
     healthCheckPath: /health
     autoDeploy: true
