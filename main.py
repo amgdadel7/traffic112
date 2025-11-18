@@ -48,18 +48,27 @@ MODEL_LOADED = False
 MODEL_LOADING_ERROR = None
 
 # Utility functions
-def detect_red_and_yellow(img, threshold=0.01):
+def detect_red_and_yellow(img, threshold=0.05):
+    """
+    Detect red and yellow colors in traffic light image.
+    Increased threshold from 0.01 to 0.05 (5%) to reduce false positives.
+    """
     desired_dim = (30, 90)
     img = cv2.resize(np.array(img), desired_dim, interpolation=cv2.INTER_LINEAR)
     img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 
-    lower_red = np.array([0, 70, 50]); upper_red = np.array([10, 255, 255])
+    # Red color range (two ranges because red wraps around in HSV)
+    lower_red = np.array([0, 70, 50])
+    upper_red = np.array([10, 255, 255])
     mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
 
-    lower_red1 = np.array([170, 70, 50]); upper_red1 = np.array([180, 255, 255])
+    lower_red1 = np.array([170, 70, 50])
+    upper_red1 = np.array([180, 255, 255])
     mask1 = cv2.inRange(img_hsv, lower_red1, upper_red1)
 
-    lower_yellow = np.array([21, 39, 64]); upper_yellow = np.array([40, 255, 255])
+    # Yellow color range (more restrictive to reduce false positives)
+    lower_yellow = np.array([20, 100, 100])  # Increased saturation and value thresholds
+    upper_yellow = np.array([30, 255, 255])
     mask2 = cv2.inRange(img_hsv, lower_yellow, upper_yellow)
 
     mask = mask0 + mask1 + mask2
@@ -90,10 +99,17 @@ def base64_to_image(base64_string: str, image_format: str = "jpeg", max_size: in
 def read_traffic_lights_object(image, boxes, scores, classes,
                                max_boxes_to_draw=20, min_score_thresh=0.5,
                                traffic_light_label=10):
+    """
+    Detect traffic lights and check if they show red or yellow (stop signal).
+    Returns: (has_traffic_light, is_stop_signal)
+    """
     im_width, im_height = image.size
     stop_flag = False
+    traffic_light_found = False
+    
     for i in range(min(max_boxes_to_draw, boxes.shape[0])):
         if scores[i] > min_score_thresh and classes[i] == traffic_light_label:
+            traffic_light_found = True
             ymin, xmin, ymax, xmax = tuple(boxes[i].tolist())
             (left, right, top, bottom) = (xmin * im_width, xmax * im_width,
                                           ymin * im_height, ymax * im_height)
@@ -105,7 +121,9 @@ def read_traffic_lights_object(image, boxes, scores, classes,
             crop_img = image.crop((left, top, right, bottom))
             if detect_red_and_yellow(crop_img):
                 stop_flag = True
-    return stop_flag
+                break  # Found stop signal, no need to check more
+    
+    return traffic_light_found, stop_flag
 
 def detect_traffic_lights_in_image(image: Image.Image) -> dict:
     global detection_graph, sess, MODEL_LOADED
@@ -126,10 +144,21 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
                 [detection_boxes, detection_scores, detection_classes, num_detections],
                 feed_dict={image_tensor: image_np_expanded})
 
-        stop_flag = read_traffic_lights_object(
+        traffic_light_found, stop_flag = read_traffic_lights_object(
             image, np.squeeze(boxes), np.squeeze(scores), np.squeeze(classes).astype(np.int32)
         )
-        command = "Stop" if stop_flag else "Go"
+        
+        # Determine command: Stop if red/yellow detected, Go if green or no traffic light
+        if not traffic_light_found:
+            command = "Go"
+            message = "No traffic light detected"
+        elif stop_flag:
+            command = "Stop"
+            message = "Traffic light detected: Red or Yellow signal (Stop)"
+        else:
+            command = "Go"
+            message = "Traffic light detected: Green signal (Go)"
+        
         confidence = float(np.max(scores)) if len(scores) > 0 else 0.0
         
         # Clean up memory
@@ -139,8 +168,8 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
         return {
             "command": command,
             "confidence": confidence,
-            "traffic_light_detected": stop_flag,
-            "message": f"Traffic light detected: {command} command"
+            "traffic_light_detected": traffic_light_found,
+            "message": message
         }
     except Exception as e:
         traceback.print_exc()
