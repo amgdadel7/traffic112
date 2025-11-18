@@ -2,6 +2,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.staticfiles import StaticFiles
 import os
+import gc  # Garbage collection for memory management
 import numpy as np
 import cv2
 from PIL import Image
@@ -70,13 +71,19 @@ def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
-def base64_to_image(base64_string: str, image_format: str = "jpeg") -> Image.Image:
+def base64_to_image(base64_string: str, image_format: str = "jpeg", max_size: int = 1024) -> Image.Image:
+    """Convert base64 string to PIL Image, with optional resizing to reduce memory usage"""
     if base64_string.startswith('data:image'):
         base64_string = base64_string.split(',')[1]
     image_data = base64.b64decode(base64_string)
     image = Image.open(io.BytesIO(image_data))
     if image.mode != 'RGB':
         image = image.convert('RGB')
+    
+    # Resize image if too large to reduce memory usage
+    if max_size and (image.width > max_size or image.height > max_size):
+        image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+    
     return image
 
 # Model related
@@ -107,6 +114,7 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
     try:
         image_np = load_image_into_numpy_array(image)
         image_np_expanded = np.expand_dims(image_np, axis=0)
+        
         with detection_graph.as_default():
             image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
             detection_boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
@@ -123,6 +131,11 @@ def detect_traffic_lights_in_image(image: Image.Image) -> dict:
         )
         command = "Stop" if stop_flag else "Go"
         confidence = float(np.max(scores)) if len(scores) > 0 else 0.0
+        
+        # Clean up memory
+        del image_np, image_np_expanded, boxes, scores, classes, num
+        gc.collect()  # Force garbage collection to free memory
+        
         return {
             "command": command,
             "confidence": confidence,
@@ -526,8 +539,12 @@ async def detect_traffic_light(file: UploadFile = File(...)):
 @app.post("/detect-base64", response_model=DetectionResponse)
 async def detect_traffic_light_base64(request: Base64ImageRequest):
     try:
-        image = base64_to_image(request.image_base64, request.image_format)
+        # Resize image to max 1024px to reduce memory usage
+        image = base64_to_image(request.image_base64, request.image_format, max_size=1024)
         result = detect_traffic_lights_in_image(image)
+        # Clean up image from memory
+        del image
+        gc.collect()  # Force garbage collection
         return DetectionResponse(**result)
     except HTTPException:
         raise

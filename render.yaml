@@ -2,7 +2,7 @@ services:
   - type: web
     name: traffic-light-detection
     env: docker
-    plan: starter
+    plan: standard  # Upgraded from starter (512MB) to standard (2GB RAM) for ML inference
     dockerfilePath: ./Dockerfile
     envVars:
       - key: PYTHONUNBUFFERED
