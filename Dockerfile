@@ -1,5 +1,5 @@
 # Use Python 3.9 as specified in render.yaml
-FROM python:3.7-slim
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
@@ -40,8 +40,9 @@ COPY . .
 # Expose port 8000
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+# Health check (Render has its own health check via healthCheckPath in render.yaml)
+# Using fixed port 8000 for Docker health check, but app listens on PORT env var
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application

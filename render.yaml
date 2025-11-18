@@ -1,10 +1,9 @@
 services:
   - type: web
     name: traffic-light-detection
-    env: python
+    env: docker
     plan: starter
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
-    startCommand: python run.py
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PYTHONUNBUFFERED
         value: 1
