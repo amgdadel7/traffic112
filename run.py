@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
 """
-Script to run the FastAPI application locally
+Script to run the FastAPI application
 """
+import os
 import uvicorn
 
 if __name__ == "__main__":
+    # Get port from environment variable (Render sets this) or default to 8000
+    port = int(os.environ.get("PORT", 8000))
+    
+    # Disable reload in production (Render sets RENDER environment variable)
+    is_production = os.environ.get("RENDER") is not None or os.environ.get("PORT") is not None
+    reload = not is_production
+    
     # Run the FastAPI app
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,  # Enable auto-reload for development
-        log_level="info"
+        port=port,
+        reload=reload,
+        log_level="info",
+        access_log=True
     )
 
